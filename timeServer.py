@@ -2,6 +2,8 @@ import pika
 import tkinter as tk
 from datetime import datetime, timedelta, timezone
 
+# Arquivo de log
+log_file = "logs_sincronizacao.txt"
 
 # Função para enviar mensagens ao broker
 def enviar_mensagem(mensagem):
@@ -28,8 +30,6 @@ def gerar_time_zones():
         timezones.append(f"UTC{utc_offset:+03d}: {formatted_time}")
     
     return timezones
-    
-    return timezones
 
 # Função para atualizar os horários e enviar ao broker
 def atualizar_time_zones():
@@ -43,8 +43,25 @@ def atualizar_time_zones():
     
     # Enviar os horários ao broker
     enviar_mensagem(mensagem)
-    
-    root.after(10000, atualizar_time_zones)  # Atualizar a cada 10 segundos
+
+    # Logar a sincronização no arquivo e na interface
+    logar_sincronizacao("Servidor", timezones)
+
+    root.after(1000, atualizar_time_zones)  # Atualizar a cada 10 segundos
+
+# Função para registrar os logs na interface e no arquivo
+def logar_sincronizacao(cliente_ip, timezones_sincronizados):
+    # Formatar a string de log
+    now = datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S")
+    log_msg = (f"Cliente {cliente_ip} synchronized at {now} with timezones: {', '.join(timezones_sincronizados)}\n")
+
+    # Exibir log na interface
+    log_text.insert(tk.END, log_msg)
+    log_text.see(tk.END)  # Rolagem automática para o último log
+
+    # Gravar log no arquivo
+    with open(log_file, "a") as f:
+        f.write(log_msg)
 
 # Configurar a interface gráfica
 root = tk.Tk()
@@ -67,6 +84,14 @@ for i in range(27):  # UTC-12 até UTC+14 (27 zonas)
     label = tk.Label(frame_horarios, text="", font=display_font, bg=bg_color, fg=fg_color, padx=10, pady=10)
     label.grid(row=i // 2, column=i % 2, padx=20, pady=10)  # Organizar em duas colunas
     labels.append(label)
+
+# Criar um frame para os logs (metade direita)
+frame_logs = tk.Frame(root, bg="black")
+frame_logs.grid(row=0, column=1, padx=10, pady=10)
+
+# Caixa de texto para exibir os logs
+log_text = tk.Text(frame_logs, width=50, height=30, bg="black", fg="white", font=("Helvetica", 12))
+log_text.pack(padx=10, pady=10)
 
 # Inicializar com todos os horários
 atualizar_time_zones()
