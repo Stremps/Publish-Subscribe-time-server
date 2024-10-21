@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 # Arquivo de log
 log_file = "logs_sincronizacao.txt"
+tempo_atualizacao = 5000  # Tempo padrão de 5 segundos
 
 # Função para enviar mensagens ao broker
 def enviar_mensagem(mensagem):
@@ -33,6 +34,7 @@ def gerar_time_zones():
 
 # Função para atualizar os horários e enviar ao broker
 def atualizar_time_zones():
+    global tempo_atualizacao
     timezones = gerar_time_zones()
 
     # Atualiza os horários na interface e envia a mensagem ao broker
@@ -47,7 +49,8 @@ def atualizar_time_zones():
     # Logar a sincronização no arquivo e na interface
     logar_sincronizacao("Servidor", timezones)
 
-    root.after(1000, atualizar_time_zones)  # Atualizar a cada 10 segundos
+    # Atualiza a cada 'tempo_atualizacao' milissegundos
+    root.after(tempo_atualizacao, atualizar_time_zones)
 
 # Função para registrar os logs na interface e no arquivo
 def logar_sincronizacao(cliente_ip, timezones_sincronizados):
@@ -62,6 +65,18 @@ def logar_sincronizacao(cliente_ip, timezones_sincronizados):
     # Gravar log no arquivo
     with open(log_file, "a") as f:
         f.write(log_msg)
+
+# Função para alterar o tempo de atualização
+def alterar_tempo():
+    global tempo_atualizacao
+    try:
+        novo_tempo = int(entry_tempo.get())
+        tempo_atualizacao = novo_tempo
+        log_text.insert(tk.END, f"Tempo de atualização alterado para {tempo_atualizacao} milissegundos.\n")
+        log_text.see(tk.END)
+    except ValueError:
+        log_text.insert(tk.END, "Erro: O valor inserido deve ser um número inteiro.\n")
+        log_text.see(tk.END)
 
 # Configurar a interface gráfica
 root = tk.Tk()
@@ -92,6 +107,21 @@ frame_logs.grid(row=0, column=1, padx=10, pady=10)
 # Caixa de texto para exibir os logs
 log_text = tk.Text(frame_logs, width=50, height=30, bg="black", fg="white", font=("Helvetica", 12))
 log_text.pack(padx=10, pady=10)
+
+# Frame para alterar o tempo de atualização
+frame_tempo = tk.Frame(root)
+frame_tempo.grid(row=1, column=0, padx=10, pady=10)
+
+# Entrada para tempo de atualização
+label_tempo = tk.Label(frame_tempo, text="Tempo de atualização (ms):")
+label_tempo.pack(side=tk.LEFT)
+
+entry_tempo = tk.Entry(frame_tempo)
+entry_tempo.pack(side=tk.LEFT)
+
+# Botão para aplicar o tempo de atualização
+btn_alterar_tempo = tk.Button(frame_tempo, text="Alterar", command=alterar_tempo)
+btn_alterar_tempo.pack(side=tk.LEFT, padx=5)
 
 # Inicializar com todos os horários
 atualizar_time_zones()
