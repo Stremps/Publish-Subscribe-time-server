@@ -1,2 +1,3 @@
 pika
 tk
+rabbitmq-server
