@@ -6,17 +6,29 @@ from datetime import datetime, timedelta, timezone
 log_file = "logs_sincronizacao.txt"
 tempo_atualizacao = 5000  # Tempo padrão de 5 segundos
 
+# Conexão global para RabbitMQ
+connection = None
+channel = None
+
+# Função para conectar ao broker RabbitMQ uma vez
+def conectar_broker():
+    global connection, channel
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+        channel.exchange_declare(exchange='time_broadcast', exchange_type='topic')
+    except Exception as e:
+        print(f"Erro ao conectar ao broker: {e}")
+
 # Função para enviar mensagens ao broker
-def enviar_mensagem(mensagem):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-
-    # Declara o exchange para envio das mensagens
-    channel.exchange_declare(exchange='time_broadcast', exchange_type='fanout')
-
-    # Publica a mensagem no exchange
-    channel.basic_publish(exchange='time_broadcast', routing_key='', body=mensagem)
-    connection.close()
+def enviar_mensagem(mensagem, routing_key):
+    global channel
+    try:
+        # Publica a mensagem no exchange com a routing_key da time zone
+        channel.basic_publish(exchange='time_broadcast', routing_key=routing_key, body=mensagem)
+        print(f"Mensagem enviada para {routing_key}")
+    except Exception as e:
+        print(f"Erro ao enviar mensagem: {e}")
 
 # Função para gerar os horários baseados em UTC com timezone-aware
 def gerar_time_zones():
@@ -28,29 +40,28 @@ def gerar_time_zones():
     for utc_offset in range(-12, 15):
         local_time = now + timedelta(hours=utc_offset)
         formatted_time = local_time.strftime(brasil_format)
-        timezones.append(f"UTC{utc_offset:+03d}: {formatted_time}")
+        timezones.append((f"UTC{utc_offset:+03d}", formatted_time))
     
     return timezones
 
 # Função para atualizar os horários e enviar ao broker
 def atualizar_time_zones():
     global tempo_atualizacao
-    timezones = gerar_time_zones()
+    try:
+        timezones = gerar_time_zones()
 
-    # Atualiza os horários na interface e envia a mensagem ao broker
-    mensagem = ""
-    for i, label in enumerate(labels):
-        label.config(text=timezones[i])
-        mensagem += timezones[i] + "\n"
-    
-    # Enviar os horários ao broker
-    enviar_mensagem(mensagem)
+        # Atualiza os horários na interface e envia a mensagem ao broker
+        for i, (timezone, horario) in enumerate(timezones):
+            labels[i].config(text=f"{timezone}: {horario}")
+            enviar_mensagem(horario, routing_key=timezone)
 
-    # Logar a sincronização no arquivo e na interface
-    logar_sincronizacao("Servidor", timezones)
+        # Logar as time zones enviadas
+        logar_sincronizacao("Servidor", [tz for tz, _ in timezones])
 
-    # Atualiza a cada 'tempo_atualizacao' milissegundos
-    root.after(tempo_atualizacao, atualizar_time_zones)
+        # Reagendar a próxima atualização
+        root.after(tempo_atualizacao, atualizar_time_zones)
+    except Exception as e:
+        print(f"Erro ao atualizar time zones: {e}")
 
 # Função para registrar os logs na interface e no arquivo
 def logar_sincronizacao(cliente_ip, timezones_sincronizados):
@@ -122,6 +133,9 @@ entry_tempo.pack(side=tk.LEFT)
 # Botão para aplicar o tempo de atualização
 btn_alterar_tempo = tk.Button(frame_tempo, text="Alterar", command=alterar_tempo)
 btn_alterar_tempo.pack(side=tk.LEFT, padx=5)
+
+# Conectar ao broker antes de iniciar as atualizações
+conectar_broker()
 
 # Inicializar com todos os horários
 atualizar_time_zones()

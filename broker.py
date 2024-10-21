@@ -6,8 +6,8 @@ def configurar_broker():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    # Declara o exchange para comunicação de broadcast (fanout)
-    channel.exchange_declare(exchange='time_broadcast', exchange_type='fanout')
+    # Declara o exchange para comunicação usando 'topic' (para uso com routing keys)
+    channel.exchange_declare(exchange='time_broadcast', exchange_type='topic')
 
     print("Broker configurado e aguardando conexões...")
 
