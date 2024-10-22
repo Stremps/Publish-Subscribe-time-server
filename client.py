@@ -11,7 +11,7 @@ consumindo = False
 stop_consuming = False
 
 # Função para conectar ao broker RabbitMQ com reconexão automática
-def conectar_broker():
+def conectar_broker(ip, port):
     global connection, channel
     try:
         # Fechar a conexão anterior, se ainda estiver aberta
@@ -19,17 +19,15 @@ def conectar_broker():
             connection.close()
             print("Conexão anterior fechada.")
 
-        # Tentar conectar ao broker
-        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        # Tentar conectar ao broker com IP e Porta especificados
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=ip, port=int(port)))
         channel = connection.channel()
         channel.exchange_declare(exchange='time_broadcast', exchange_type='topic')
         print("Conectado ao broker.")
         return connection, channel
     except Exception as e:
         print(f"Erro ao conectar ao broker: {e}")
-        # Tentar reconectar após um tempo de espera
-        time.sleep(5)
-        return conectar_broker()  # Recursão para tentar reconectar
+        return None, None
 
 # Função para assinar novas time zones
 def assinar_timezones(timezones):
@@ -61,7 +59,6 @@ def consumir_mensagens():
                     channel.connection.process_data_events(time_limit=1)
                 except pika.exceptions.ConnectionClosed:
                     print("Conexão perdida durante o consumo. Tentando reconectar...")
-                    conectar_broker()
                     break
         except Exception as e:
             print(f"Erro ao consumir mensagens: {e}")
@@ -69,6 +66,10 @@ def consumir_mensagens():
 # Função chamada ao clicar em "Sincronizar"
 def sincronizar_horarios():
     global queue_name, consumindo, stop_consuming, connection, channel
+
+    # Obter IP e Porta fornecidos pelo usuário
+    ip_servidor = entry_ip.get()
+    porta_servidor = entry_port.get()
 
     timezones_selecionadas = [lb_timezones.get(i) for i in lb_timezones.curselection()]
     
@@ -78,7 +79,7 @@ def sincronizar_horarios():
         log_text.insert(tk.END, f"Time zones selecionadas: {', '.join(timezones_selecionadas)}\n")
 
         # Criar ou reconectar ao broker e criar uma nova fila exclusiva
-        connection, channel = conectar_broker()
+        connection, channel = conectar_broker(ip_servidor, porta_servidor)
         if channel and channel.is_open:
             result = channel.queue_declare(queue='', exclusive=True)
             queue_name = result.method.queue
@@ -130,9 +131,25 @@ frame_logs = tk.Frame(root)
 frame_logs.grid(row=0, column=1, padx=10, pady=10)
 
 # Caixa de texto para logs
-log_text = tk.Text(frame_logs, width=50, height=20, bg="black", fg="white", font=("Helvetica", 12))
+log_text = tk.Text(frame_logs, width=75, height=15, bg="black", fg="white", font=("Helvetica", 12))
 log_text.pack(padx=10, pady=10)
 
+# Frame para inserir IP e Porta do servidor (área azul)
+frame_conexao = tk.Frame(root)
+frame_conexao.grid(row=0, column=2, padx=10, pady=10)
+
+# Label e entrada para o IP do servidor
+label_ip = tk.Label(frame_conexao, text="IP do Servidor:", fg="white", font=("Helvetica", 12))
+label_ip.pack(pady=5)
+entry_ip = tk.Entry(frame_conexao, width=20)
+entry_ip.pack(pady=5)
+
+# Label e entrada para a Porta do servidor
+label_port = tk.Label(frame_conexao, text="Porta do Servidor:", fg="white", font=("Helvetica", 12))
+label_port.pack(pady=5)
+entry_port = tk.Entry(frame_conexao, width=10)
+entry_port.pack(pady=5)
+
 # Configurações da janela principal
-root.geometry("800x400")  # Tamanho da janela ajustado
+root.geometry("1000x500")  # Tamanho da janela ajustado
 root.mainloop()

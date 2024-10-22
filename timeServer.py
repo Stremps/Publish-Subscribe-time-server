@@ -1,9 +1,8 @@
-import pika
 import tkinter as tk
+import pika
+import socket
 from datetime import datetime, timedelta, timezone
 
-# Arquivo de log
-log_file = "logs_sincronizacao.txt"
 tempo_atualizacao = 5000  # Tempo padrão de 5 segundos
 
 # Conexão global para RabbitMQ
@@ -19,6 +18,19 @@ def conectar_broker():
         channel.exchange_declare(exchange='time_broadcast', exchange_type='topic')
     except Exception as e:
         print(f"Erro ao conectar ao broker: {e}")
+
+# Função para obter o IP local da máquina
+def obter_ip_local():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Conecta a um endereço IP fictício na rede para obter o IP local
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception as e:
+        ip = "127.0.0.1"  # Default para localhost
+    finally:
+        s.close()
+    return ip
 
 # Função para enviar mensagens ao broker
 def enviar_mensagem(mensagem, routing_key):
@@ -67,15 +79,11 @@ def atualizar_time_zones():
 def logar_sincronizacao(cliente_ip, timezones_sincronizados):
     # Formatar a string de log
     now = datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S")
-    log_msg = (f"Cliente {cliente_ip} synchronized at {now} with timezones: {', '.join(timezones_sincronizados)}\n")
+    log_msg = (f"[{now}] - {cliente_ip} sent to stream the timezones: {', '.join(timezones_sincronizados)}\n")
 
     # Exibir log na interface
     log_text.insert(tk.END, log_msg)
     log_text.see(tk.END)  # Rolagem automática para o último log
-
-    # Gravar log no arquivo
-    with open(log_file, "a") as f:
-        f.write(log_msg)
 
 # Função para alterar o tempo de atualização
 def alterar_tempo():
@@ -133,6 +141,13 @@ entry_tempo.pack(side=tk.RIGHT)
 # Botão para aplicar o tempo de atualização
 btn_alterar_tempo = tk.Button(frame_tempo, text="Alterar", command=alterar_tempo)
 btn_alterar_tempo.pack(side=tk.RIGHT, padx=5)
+
+# Obter o IP local e exibir na interface
+ip_local = obter_ip_local()
+porta = 5672  # Porta padrão do RabbitMQ
+label_info_ip = tk.Label(frame_tempo, text=f"Servidor IP: {ip_local} | Porta: {porta}", font=("Helvetica", 12), bg="black", fg="white", padx=10, pady=10)
+label_info_ip.pack(pady=10)
+
 
 # Conectar ao broker antes de iniciar as atualizações
 conectar_broker()
