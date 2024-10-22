@@ -113,26 +113,26 @@ for i in range(27):  # UTC-12 até UTC+14 (27 zonas)
 
 # Criar um frame para os logs (metade direita)
 frame_logs = tk.Frame(root, bg="black")
-frame_logs.grid(row=0, column=1, padx=10, pady=10)
+frame_logs.grid(sticky='n', row=0, column=1, padx=10, pady=10)
 
 # Caixa de texto para exibir os logs
-log_text = tk.Text(frame_logs, width=50, height=30, bg="black", fg="white", font=("Helvetica", 12))
+log_text = tk.Text(frame_logs, width=75, height=30, bg="black", fg="white", font=("Helvetica", 12))
 log_text.pack(padx=10, pady=10)
 
 # Frame para alterar o tempo de atualização
 frame_tempo = tk.Frame(root)
-frame_tempo.grid(row=1, column=0, padx=10, pady=10)
+frame_tempo.grid(sticky='s', row=0, column=1, padx=10, pady=50)
 
 # Entrada para tempo de atualização
 label_tempo = tk.Label(frame_tempo, text="Tempo de atualização (ms):")
-label_tempo.pack(side=tk.LEFT)
+label_tempo.pack(side=tk.RIGHT)
 
 entry_tempo = tk.Entry(frame_tempo)
-entry_tempo.pack(side=tk.LEFT)
+entry_tempo.pack(side=tk.RIGHT)
 
 # Botão para aplicar o tempo de atualização
 btn_alterar_tempo = tk.Button(frame_tempo, text="Alterar", command=alterar_tempo)
-btn_alterar_tempo.pack(side=tk.LEFT, padx=5)
+btn_alterar_tempo.pack(side=tk.RIGHT, padx=5)
 
 # Conectar ao broker antes de iniciar as atualizações
 conectar_broker()
