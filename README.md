@@ -9,6 +9,6 @@
 1. Introduction to Publish-Subscribe (Fellipe)
 2. Concepts and functionality (Fellipe)
 3. Advantages and disadvantages (Fellipe)
-4. Implementation examples (Gustavo)
+4. ~Implementation examples~ (Gustavo)
 5. Common tools and protocols (Gustavo)
 6. Code demonstration (Gustavo)
